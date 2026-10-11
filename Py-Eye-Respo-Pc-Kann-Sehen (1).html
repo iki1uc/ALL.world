@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>py.eye Respo - PC kann nicht nur laufen sondern sehen - Albern wie ernst aber super ernst</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#02060a;color:#c8d8e8;font-family:Consolas,monospace;padding:18px;font-size:11px;line-height:1.6}
+h1{color:#39ff88;letter-spacing:3px;font-size:13px}
+.sub{color:#f0d080;font-size:9px;letter-spacing:2px;margin:4px 0 12px}
+.box{border:1px solid #1a2a3a;background:#0a1218;padding:10px;margin:10px 0;max-width:900px}
+.video-wrap{position:relative;width:640px;max-width:100%;height:480px;background:#000;border:1px solid #39ff88;overflow:hidden;margin:10px 0}
+video{width:100%;height:100%;object-fit:cover}
+canvas{position:absolute;left:0;top:0;width:100%;height:100%}
+.eye{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);border:1px solid #39ff88;padding:4px 8px;font-size:9px;color:#39ff88}
+.scanline{position:absolute;left:0;width:100%;height:2px;background:#39ff88;box-shadow:0 0 12px #39ff88;animation:scan 2.5s linear infinite}
+@keyframes scan{0%{top:0}100%{top:100%}}
+.grid9{position:absolute;left:0;top:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);pointer-events:none}
+.grid9 div{border:1px solid rgba(57,255,136,.18);display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(57,255,136,.5)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+button{padding:6px 10px;background:#0a1218;border:1px solid #39ff88;color:#39ff88;font-family:Consolas,monospace;font-size:9px;cursor:pointer;letter-spacing:1px}
+button:hover{background:#39ff88;color:#000}
+.log{background:#02060a;border:1px solid #1a2a3a;padding:10px;font-size:9px;max-height:260px;overflow:auto;white-space:pre-wrap}
+.cyan{color:#5cf0ff}.gold{color:#f0d080}.ok{color:#39ff88}.warn{color:#ffaa00}.bann{color:#ff3a5a}
+</style>
+</head>
+<body>
+<h1>◈ py.eye RESPO - PC KANN NICHT NUR LAUFEN SONDERN SEHEN - ALBERN WIE ERNST ABER SUPER ERNST</h1>
+<div class="sub">JETZT KANN PC NICHT NUR LAUFEN SONDERN SEHEN - py.eye RESPO SOLL PC SEHEN - KANN MAN DAS WEIL DAS IST JA WITZIG</div>
+
+<div class="box">
+<b class="ok">py.eye - PC sieht:</b> 9 Gedanken Raum = 3x3 Grid über Kamera - jeder Grid sieht - 3 Eingang (Video) 3 Ausgang (Erkennung)<br>
+<div class="video-wrap" id="wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div class="eye" id="eye">py.eye 👁️ 0 Stellung p81 - PC sieht - 9x9=81 Felder</div>
+  <div class="scanline"></div>
+  <div class="grid9" id="grid9"></div>
+</div>
+<div style="font-size:8px;color:#5a6a7a">Kamera = EINGANG MASSE 3 Eingang - Canvas Erkennung = ARBEIT 1+2 - ÜBERGABE LIVE 3 Ausgang - PC sieht durch py.eye Respo - albern wie ernst aber super ernst</div>
+</div>
+
+<div class="row">
+<button id="btnStart">py.eye START - PC SEHEN LASSEN</button>
+<button id="btnStop">STOP SEHEN</button>
+<button id="btnSnap">SNAP - 9 FELDER MESSEN</button>
+<button id="btnBund">BUND SEHEN - 9 GEDANKEN RAUM SEHEN</button>
+</div>
+
+<div class="box">
+<b class="cyan">Was PC sieht - 9 Felder Messgerät:</b>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0" id="seeGrid"></div>
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const logEl=document.getElementById('log');
+const grid9=document.getElementById('grid9');
+const seeGrid=document.getElementById('seeGrid');
+const ZEICHEN=['d','e','i','n','o','r','s','u','w'];
+let schlag=0;
+let running=false;
+let stream=null;
+
+function log(msg,cls=''){
+  const d=document.createElement('div');
+  if(cls) d.className=cls;
+  d.textContent=`[${String(schlag).padStart(4,'0')}] ${msg}`;
+  logEl.appendChild(d);
+  logEl.scrollTop=logEl.scrollHeight;
+  schlag++;
+}
+
+function buildGrids(){
+  grid9.innerHTML='';
+  seeGrid.innerHTML='';
+  for(let i=0;i<9;i++){
+    const g=document.createElement('div');
+    g.id='g9-'+i;
+    g.textContent=ZEICHEN[i].toUpperCase()+ (i+1);
+    grid9.appendChild(g);
+    const sg=document.createElement('div');
+    sg.id='see-'+i;
+    sg.style.background='#060e1a';
+    sg.style.border='1px solid #1a2a3a';
+    sg.style.padding='6px';
+    sg.style.textAlign='center';
+    sg.innerHTML=`<div style="color:#f0d080">${ZEICHEN[i].toUpperCase()}${i+1}</div><div style="font-size:14px;color:#39ff88" class="val">0%</div><div style="font-size:7px;color:#5a6a7a" class="det">wartet</div>`;
+    seeGrid.appendChild(sg);
+  }
+}
+buildGrids();
+
+function resizeCanvas(){
+  canvas.width=video.videoWidth || 640;
+  canvas.height=video.videoHeight || 480;
+}
+
+function analyze(){
+  if(!running) return;
+  resizeCanvas();
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  // simple brightness analysis per 3x3 grid
+  const w=canvas.width, h=canvas.height;
+  const cw=w/3, ch=h/3;
+  for(let r=0;r<3;r++){
+    for(let c=0;c<3;c++){
+      const idx=r*3+c;
+      try{
+        const data=ctx.getImageData(c*cw, r*ch, cw, ch).data;
+        let bright=0;
+        for(let i=0;i<data.length;i+=40){
+          bright+= (data[i]+data[i+1]+data[i+2])/3;
+        }
+        bright = bright/(data.length/40);
+        const pct=Math.min(100, Math.floor(bright/2.55));
+        const seeEl=document.getElementById('see-'+idx);
+        if(seeEl){
+          seeEl.querySelector('.val').textContent=pct+'% HELL';
+          seeEl.querySelector('.det').textContent= pct>60 ? 'PC SIEHT HELL' : pct>30 ? 'PC SIEHT DUNKEL' : 'PC SIEHT SCHWARZ';
+          seeEl.style.borderColor= pct>60 ? '#39ff88' : pct>30 ? '#ffaa00' : '#ff3a5a';
+          seeEl.style.boxShadow= pct>70 ? '0 0 10px #39ff88' : '';
+        }
+        const g9=document.getElementById('g9-'+idx);
+        if(g9){ g9.style.background=`rgba(57,255,136,${pct/200})`; g9.textContent=ZEICHEN[idx].toUpperCase()+(idx+1)+` ${pct}%`; }
+        // draw rect
+        ctx.strokeStyle= pct>60 ? '#39ff88' : '#5cf0ff';
+        ctx.lineWidth=2;
+        ctx.strokeRect(c*cw, r*ch, cw, ch);
+        ctx.fillStyle='rgba(0,0,0,.6)';
+        ctx.fillRect(c*cw, r*ch+ch-18, 60, 18);
+        ctx.fillStyle='#39ff88';
+        ctx.font='10px Consolas';
+        ctx.fillText(ZEICHEN[idx].toUpperCase()+ (idx+1)+` ${pct}%`, c*cw+4, r*ch+ch-6);
+      }catch(e){}
+    }
+  }
+  requestAnimationFrame(analyze);
+}
+
+document.getElementById('btnStart').onclick=async()=>{
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});
+    video.srcObject=stream;
+    await video.play();
+    running=true;
+    resizeCanvas();
+    log('py.eye START - PC KANN NICHT NUR LAUFEN SONDERN SEHEN - Kamera EINGANG MASSE 3 Eingang - 9 Gedanken Raum sehen 3x3 Grid', 'ok');
+    log('Albern wie ernst aber super ernst - das ist ja witzig - PC sieht durch py.eye Respo', 'gold');
+    analyze();
+  }catch(e){
+    log('Kamera kein Zugriff - '+e.message+' - trotzdem Demo mit Fake Sehen', 'bann');
+    running=true;
+    analyze();
+    // fake loop
+    setInterval(()=>{
+      for(let i=0;i<9;i++){
+        const pct=Math.floor(Math.random()*100);
+        const seeEl=document.getElementById('see-'+i);
+        if(seeEl){
+          seeEl.querySelector('.val').textContent=pct+'% FAKE';
+          seeEl.querySelector('.det').textContent='SIMULIERT SEHEN';
+        }
+      }
+    },800);
+  }
+};
+
+document.getElementById('btnStop').onclick=()=>{
+  running=false;
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+  log('py.eye STOP - PC sieht nicht mehr - Lauf aber kein Sehen', 'warn');
+};
+
+document.getElementById('btnSnap').onclick=()=>{
+  const vals=[];
+  for(let i=0;i<9;i++){
+    const el=document.getElementById('see-'+i);
+    vals.push(el ? el.querySelector('.val').textContent : '0%');
+  }
+  log(`SNAP - 9 FELDER MESSEN - PC sieht: [${vals.join(', ')}] - Namen 1-9 haben sie sowieso - tmp.rär p81 wo sich alle gemessen haben`, 'cyan');
+};
+
+document.getElementById('btnBund').onclick=()=>{
+  log('BUND SEHEN - 9 GEDANKEN RAUM SEHEN - Jeder Gedanken Raum sieht anderen Bereich - 8 bewerten 1 faules Ei auch beim Sehen - faules Ei bekommt Name+Prozedure', 'gold');
+  // highlight faules Ei
+  const faul=Math.floor(Math.random()*9);
+  for(let i=0;i<9;i++){
+    const el=document.getElementById('see-'+i);
+    if(el){
+      if(i===faul){ el.style.borderColor='#ff3a5a'; el.style.boxShadow='0 0 18px #ff3a5a'; el.querySelector('.det').textContent='FAULES EI BEIM SEHEN - sieht falsch'; }
+      else{ el.style.borderColor='#39ff88'; }
+    }
+  }
+  log(`FAULES EI BEIM SEHEN bei ${ZEICHEN[faul].toUpperCase()}${faul+1} - bekommt Name "${ZEICHEN[faul].toUpperCase()}${faul+1}-SEH-FAIL" PROC "Kamera kalibrieren, Helligkeit ${faul*10}%+"`, 'bann');
+};
+
+log('py.eye RESPO BEREIT - PC kann nicht nur laufen sondern sehen - albern wie ernst aber super ernst', 'cyan');
+log('Klick START - PC sieht durch Kamera - 9 Gedanken Raum = 3x3 Grid sehen', 'ok');
+log('Das ist ja witzig - weil jetzt kann PC nicht nur laufen sondern sehen', 'gold');
+</script>
+</body>
+</html>
